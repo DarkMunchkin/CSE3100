@@ -209,7 +209,7 @@ void * thread_referee(void *arg_in)
         pthread_barrier_wait(&result->barrier);
 
         if (!arg->opt_quiet) {
-            printf("Referee: round %d: player %d chooses %d, player %d chooses %d, outcome is %d\n", i, 1, choice1, 2, choice2, outcome);
+            printf("Ref: Round %d: (%d,%d) outcome is %d.\n", round_number, player1_choice, player2_choice, outcome);
         }
 
     }
