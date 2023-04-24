@@ -128,18 +128,12 @@ void * thread_player(void *arg_in)
         //  send choice r to referee
         //  get the result from referee and save it into outcome
         pthread_mutex_lock(&choice->mutex);
-        while (choice->status != S_INIT) {
-            pthread_cond_wait(&choice->cond, &choice->mutex);
-        }
         choice->value = r;
         choice->status = S_READY;
         pthread_cond_signal(&choice->cond);
         pthread_mutex_unlock(&choice->mutex);
-
-        pthread_mutex_lock(&result->barrier_mutex);
         pthread_barrier_wait(&result->barrier);
-        int outcome = result->value;
-        pthread_mutex_unlock(&result->barrier_mutex);
+        outcome = result->value;
 
         if (outcome == 0) 
             arg->n_ties ++;
@@ -189,42 +183,34 @@ void * thread_referee(void *arg_in)
         //      outcome = compare_choices(choice1, choice2);
         //
         // The big challenge is synchronization.
+
+        int choice1, choice2, outcome;
         pthread_mutex_lock(&p1->mutex);
         while (p1->status != S_READY) {
             pthread_cond_wait(&p1->cond, &p1->mutex);
         }
-        int choice1 = p1->value;
+        choice1 = p1->value;
         p1->status = S_INIT;
-        pthread_cond_signal(&p1->cond);
         pthread_mutex_unlock(&p1->mutex);
 
         pthread_mutex_lock(&p2->mutex);
         while (p2->status != S_READY) {
             pthread_cond_wait(&p2->cond, &p2->mutex);
         }
-        int choice2 = p2->value;
+        choice2 = p2->value;
         p2->status = S_INIT;
-        pthread_cond_signal(&p2->cond);
         pthread_mutex_unlock(&p2->mutex);
 
-        int outcome = compare_choices(choice1, choice2);
+        // Find out who wins
+        outcome = compare_choices(choice1, choice2);
 
-        pthread_mutex_lock(&result->barrier_mutex);
+        // Announce result
         result->value = outcome;
         pthread_barrier_wait(&result->barrier);
-        pthread_mutex_unlock(&result->barrier_mutex);
 
-        if (outcome == 0) {
-            printf("Referee: round %d is a tie.\n", i);
-        } else {
-            printf("Referee: round %d: ", i);
-            if (outcome == 1) {
-                printf("Player 1 wins.\n");
-            } else {
-                printf("Player 2 wins.\n");
-            }
+        if (!arg->opt_quiet) {
+            printf("Referee: round %d: player %d chooses %d, player %d chooses %d, outcome is %d\n", i, 1, choice1, 2, choice2, outcome);
         }
-        int choice1, choice2, outcome;
 
     }
     return NULL;
